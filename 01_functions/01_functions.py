@@ -4,19 +4,7 @@
 print "-"*60
 
 # Задача1: написать функцию, складыющую аргументы, передаваемые по очереди, либо в виде списка/кортежа
-"""
-# мой первоначальный вариант был такой 
-# (опустим тот факт что он работает только с целыми/вещественными числами, но не со строками)
-# однако, такая штука не работает на списках и кортежах, 
-# поэтому пришлось усложнять. 
-# Подозреваю, что таки можно сделать проще
-# текущий вариант мне не очень нравится
-def listSum(*listArg):
-	res = 0
-	for x in listArg:
-		res += x
-	return res
-"""
+
 
 def listSum(*listArg):
 	listToAdd = []
@@ -26,11 +14,9 @@ def listSum(*listArg):
 		else :
 			listToAdd.append(L)
 
-#	result = listToAdd[0]
-#	for x in listToAdd[1:]:
-#		result += x
 
-	return sum(listToAdd[1:],listToAdd[0])
+#	return sum(listToAdd[1:],listToAdd[0])
+	return result
 
 print "Task1. Results:"
 print listSum(1,2,3)
