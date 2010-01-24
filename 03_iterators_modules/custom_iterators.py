@@ -31,6 +31,9 @@ def chain(*args):
     raise StopIteration
     
 #test
+#
+# Review: write tests as doctests
+#
 print "Begin test #1: cycle"
 i = iter([1, 2, 3])
 c = cycle(i)
