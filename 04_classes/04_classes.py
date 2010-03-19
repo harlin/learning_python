@@ -1,6 +1,37 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
+'''
+>>> class X(Observable): pass
+>>> x = X(foo=1, bar=5, _bazz=12, name='Amok', props=('One', 'two'))
+>>> print x
+X(bar=5, foo=1, name='Amok', props=('One', 'two'))
+>>> x.foo
+1
+>>> x.name
+'Amok'
+>>> x._bazz
+12
+
+>>> x = DictAttr(('one', 1), ('two', 2), ('three', 3))
+>>> x
+{'one': 1, 'two': 2, 'three': 3}
+>>> x['three']
+3
+>>> x.get('one')
+1
+>>> x.get('five', 'missing')
+'missing'
+>>> x.one
+1
+>>> x.five
+Traceback (most recent call last):
+...
+AttributeError: DictAttr instance has no attribute 'five'
+
+
+'''
+
 class Observable:
     def __init__(self,**kwargs):
         for key in kwargs.keys():
@@ -12,25 +43,28 @@ class Observable:
         custom_repr += ")"
         return custom_repr
         
+'''
+
+'''
+
 
 class DictAttr:
     def __init__(self, *args, **kwargs):
         self.__keys = []
         for pair in args:
             setattr(self, pair[0], pair[1])
-            if not pair[0] in self.__keys:
-                self.__keys.append(pair[0])
         for key in kwargs.keys():
             setattr(self, key, kwargs[key])
-            if not key in self.__keys:
-                self.__keys.append(key)
 
     def __contains__(self, key):
         return key in self.__keys
         
-    def __delitem(self, key):
-        delattr(self, key)
+    def __delattr__(self, key):
+        self.__dict__.pop(key)
         self.__keys.remove(key)
+    
+    def __delitem__(self, key):
+        delattr(self, key)
 
     def __getitem__(self, key):
         if key in self.__keys:
@@ -60,10 +94,14 @@ class DictAttr:
         custom_repr += "}"
         return custom_repr
 
+    def __setattr__(self, key, value):
+        self.__dict__[key] = value
+        if key not in self.__keys and key != '_DictAttr__keys':
+        #TODO: Think how bad it is    
+            self.__keys.append(key)
+
     def __setitem__(self, key, value):
         setattr(self, key, value)
-        if key not in self.__keys:
-            self.__keys.append(key)
 
     def __str__(self):
         custom_repr = "{"
@@ -74,21 +112,16 @@ class DictAttr:
     def clear(self):
         for key in self.__keys:
             delattr(self, key)
-        self.__keys = []
     
     def copy(self):
     #TODO:
     #   A bit scary, but i think this'll work
-        D = DictAttr.fromkeys(self.keys(), self.values())
+        D = DictAttr(zip(self.keys(), self.values()))
         return D
     
     def fromkeys(keys, values = []):
-    #TODO:
-    #   This realisation is awful
         values.append( [None] * (len(keys) - len(values)) )
-        D = DictAttr()
-        for i in xrange(len(keys)):
-            D.__setitem__(keys[i], values[i])
+        D = DictAttr(zip(keys, values))
         return D
     
     def get(self, key, default_value = None):
@@ -124,7 +157,6 @@ class DictAttr:
         if key in self.__keys:
             value = getattr(self, key)
             delattr(self,key)
-            self.__keys.remove(key)
             return value
         else:
             if default_value == None:
@@ -139,7 +171,6 @@ class DictAttr:
             key = filter((lambda x: x[0] != '_'), dir(self))[0]
             value = getattr(self, key)
             delattr(self,key)
-            self.__keys.remove(key)
             return key, value            
 
     def setdefault(self, key, default_value = None):
@@ -147,7 +178,6 @@ class DictAttr:
             return getattr(self, key)
         else:
             setattr(self, key, default_value)
-            self.__keys.append(key)
             return default_value
 
     def update(self, some_container, **kwargs):
@@ -156,39 +186,18 @@ class DictAttr:
         if 'keys' in dir(some_container):
             for key in some_container.keys():
                 setattr(self, key, some_container[key])
-                if not key in self.__keys:
-                    self.__keys.append(key)
         else:
             for pair in some_container:
                 setattr(self, pair[0], pair[1])
-                if not pair[0] in self.__keys:
-                    self.__keys.append(pair[0])
         for key in kwargs.keys():
             setattr(self, key, kwargs[key])    
-            if not key in self.__keys:
-                self.__keys.append(key)    
     
     def values(self):
         return [getattr(self, key) for key in self.keys()]
 
-# test
-print "Begin test #1: Observable: "
-
-class X(Observable):
-    pass
-x = X(foo=1, bar=5, _bazz=12, name='Amok', props=('One', 'two'))
-print x
-print x.foo
-print x.name
-print x._bazz
 
 
-print "Begin test #2: DictAttr: "
 
-x = DictAttr(('one', 1), ('two', 2), ('three', 3))
-print x
-print x['three']
-print x.get('one')
-print x.get('five', 'missing')
-print x.one
-print x.five
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
