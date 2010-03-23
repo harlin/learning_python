@@ -39,15 +39,27 @@ class Observable:
     def __repr__(self):
         custom_repr = self.__class__.__name__
         custom_repr += "("
+        #
+        # Review: check your code by http://pypi.python.org/pypi/pep8
+        #
         custom_repr += ', '.join( [arg + "=" + repr(getattr(self, arg)) for arg in dir(self) if arg[0] != '_'] )
         custom_repr += ")"
         return custom_repr
-        
+
+#
+# Review: Empty docstring. WTF?
+#
 '''
 
 '''
 
 
+#
+# Review: Ooooooooh. Too much code. Use dict or some of mappings
+# from `collections` module as base class.
+#
+# I'll review again after refactoring.
+#
 class DictAttr:
     def __init__(self, *args, **kwargs):
         self.__keys = []

@@ -20,6 +20,10 @@ def cycle(some_iter):
 #   Формально требования я выполнил, но такое ощущение что
 #   все можно сделать намного проще и культурнее. Полез читать.
     while 1:
+        #
+        # Review: while 1 is deprecated variant, better use `while True`, but
+        # the best is use `for` cycle :)
+        #
         item_list = []
         while 1:
             try:
@@ -30,9 +34,16 @@ def cycle(some_iter):
                 break
         some_iter = iter(item_list)
     #TODO: Придумать как это написать без применения тяжелых извращений
+    #
+    # Review: overall idea is right, but implementation may be more cleaner
+    #
     pass
     
 
+#
+# Review: better make doctests for single function inside docstring of this
+# function
+#
 '''
 >>> i1 = iter([1, 2, 3])
 >>> i2 = iter([4, 5])
@@ -55,6 +66,10 @@ StopIteration
 def chain(*args):
     for some_iter in args:
     #TODO: Подумать как обойтись без while 1
+    #
+    # Review: why need `while` if `for x in foo` do the same thing
+    # more cleaner?
+    #
         while 1:
             try:
                 n = some_iter.next()
