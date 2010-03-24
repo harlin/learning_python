@@ -19,25 +19,16 @@ def cycle(some_iter):
     1
 
     '''
-    #   Текущий вариант реализации мне не нравится абслютно.
-    #   Формально требования я выполнил, но такое ощущение что
-    #   все можно сделать намного проще и культурнее. Полез читать.
-    while True:
-        #
-        # Review: while 1 is deprecated variant, better use `while True`, but
-        # the best is use `for` cycle :)
-        #
-        item_list = []
-        for n in some_iter:
-            item_list.append(n)
-            yield n
+    #   Renewed realization has no "while True" constructions
+    
+    item_list = []
+    for n in some_iter:
+        item_list.append(n)
+        yield n
 
-        some_iter = iter(item_list)
-    #TODO: Придумать как это написать без применения тяжелых извращений
-    #
-    # Review: overall idea is right, but implementation may be more cleaner
-    #
-    pass
+    for item in item_list:
+        item_list.append(item)
+        yield item
 
 
 def chain(*args):
