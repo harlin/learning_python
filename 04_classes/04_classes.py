@@ -63,6 +63,11 @@ class Observable:
 class DictAttr:
     def __init__(self, *args, **kwargs):
         self.__keys = []
+        #
+        # Review: dict supports both pairs and dict:
+        # dict([('x', 1), ('y', 2)])
+        # dict({'x': 1, 'y': 2})
+        #
         for pair in args:
             setattr(self, pair[0], pair[1])
         for key in kwargs.keys():
@@ -108,6 +113,15 @@ class DictAttr:
 
     def __setattr__(self, key, value):
         self.__dict__[key] = value
+        #
+        # Review: Try to do reverse logic: make setitem default action, but
+        # setattr (exclude non-public attr [remebmer convention about '_X'
+        # names]) as setitem alias. See. Try it, and you'll see how code will
+        # look better.
+        #
+        # It's common sence to use some non-public dict attr as storage for
+        # custom keys, instead of use __dict__ as common storage and
+        # self.__keys as "keys filtering".
         if key not in self.__keys and key != '_DictAttr__keys':
         #TODO: Think how bad it is    
             self.__keys.append(key)
@@ -117,6 +131,9 @@ class DictAttr:
 
     def __str__(self):
         custom_repr = "{"
+        #
+        # Review: too long line, try to keep 80 cols limit
+        #
         custom_repr += ', '.join( [repr(key) + ": " + repr(getattr(self, key)) for key in self.__keys] )
         custom_repr += "}"
         return custom_repr
@@ -128,6 +145,11 @@ class DictAttr:
     def copy(self):
     #TODO:
     #   A bit scary, but i think this'll work
+        #
+        # Review: scary is reasonable for "generic dict", but both .keys() and
+        # .values() are controlled by you and they keep right order, so you
+        # may sleep quietly.
+        #
         D = DictAttr(zip(self.keys(), self.values()))
         return D
     
@@ -148,9 +170,17 @@ class DictAttr:
     def items(self):
         return [(key, getattr(self, key)) for key in self.__keys]
     
+    #
+    # Review: WRONG indent for comment. Comment MUST have the same indent
+    # as code. After `def f():` indent should have NEXT level.
+    #
     def iteritems(self):
     #TODO:
     #   I'm not sure whether this realization satisfies the conditions
+        #
+        # Review: better use generator expression inside iteritems and
+        # list(self.iteritems()) inside items :)
+        #
         return iter(self.items())
         
     def iterkeys(self):
