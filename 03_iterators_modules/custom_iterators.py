@@ -26,9 +26,19 @@ def cycle(some_iter):
         item_list.append(n)
         yield n
 
+    #
+    # Review: WARNING: Memory leak detected!
     for item in item_list:
         item_list.append(item)
         yield item
+    # You shouldn't remove `while` everwhere :)
+    # `while` is good enough when you have item_list collected
+    ##
+    ## i = 0
+    ## n = len(item_list)
+    ## while True:
+    ##     i+= 1
+    ##     yield item_list[ i % n ]
 
 
 def chain(*args):
@@ -52,14 +62,13 @@ def chain(*args):
     StopIteration
     '''
     for some_iter in args:
-    #
-    # Review: why need `while` if `for x in foo` do the same thing
-    # more cleaner?
-    #
-    # Done
-    #
         for n in some_iter:
             yield n
+    #
+    # Review: StopIteration is redudant. `return` inside generator implicitly
+    # raises StopIteraton. But when you return nothing, it implicitly means
+    # `return None`.
+    #
     raise StopIteration
 
 if __name__ == "__main__":
