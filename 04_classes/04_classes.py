@@ -1,243 +1,167 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
-'''
->>> class X(Observable): pass
->>> x = X(foo=1, bar=5, _bazz=12, name='Amok', props=('One', 'two'))
->>> print x
-X(bar=5, foo=1, name='Amok', props=('One', 'two'))
->>> x.foo
-1
->>> x.name
-'Amok'
->>> x._bazz
-12
-
->>> x = DictAttr(('one', 1), ('two', 2), ('three', 3))
->>> x
-{'one': 1, 'two': 2, 'three': 3}
->>> x['three']
-3
->>> x.get('one')
-1
->>> x.get('five', 'missing')
-'missing'
->>> x.one
-1
->>> x.five
-Traceback (most recent call last):
-...
-AttributeError: DictAttr instance has no attribute 'five'
-
-
-'''
 
 class Observable:
-    def __init__(self,**kwargs):
+    '''
+    >>> class X(Observable): pass
+    >>> x = X(foo=1, bar=5, _bazz=12, name='Amok', props=('One', 'two'))
+    >>> print x
+    X(bar=5, foo=1, name='Amok', props=('One', 'two'))
+    >>> x.foo
+    1
+    >>> x.name
+    'Amok'
+    >>> x._bazz
+    12
+    >>> x.name = 'Brian'
+    >>> x.name
+    'Brian'
+    '''
+
+    def __init__(self, **kwargs):
         for key in kwargs.keys():
             setattr(self, key, kwargs[key])
+
     def __repr__(self):
         custom_repr = self.__class__.__name__
         custom_repr += "("
-        #
-        # Review: check your code by http://pypi.python.org/pypi/pep8
-        #
-        custom_repr += ', '.join( [arg + "=" + repr(getattr(self, arg)) for arg in dir(self) if arg[0] != '_'] )
+        custom_repr += ', '.join([arg + "=" + repr(getattr(self, arg)) \
+            for arg in dir(self) if arg[0] != '_'])
         custom_repr += ")"
         return custom_repr
 
-#
-# Review: Empty docstring. WTF?
-#
-'''
 
-'''
-
-
-#
-# Review: Ooooooooh. Too much code. Use dict or some of mappings
-# from `collections` module as base class.
-#
-# I'll review again after refactoring.
-#
-class DictAttr:
-    def __init__(self, *args, **kwargs):
-        self.__keys = []
-        #
-        # Review: dict supports both pairs and dict:
-        # dict([('x', 1), ('y', 2)])
-        # dict({'x': 1, 'y': 2})
-        #
-        for pair in args:
-            setattr(self, pair[0], pair[1])
-        for key in kwargs.keys():
-            setattr(self, key, kwargs[key])
-
-    def __contains__(self, key):
-        return key in self.__keys
-        
-    def __delattr__(self, key):
-        self.__dict__.pop(key)
-        self.__keys.remove(key)
-    
-    def __delitem__(self, key):
-        delattr(self, key)
-
-    def __getitem__(self, key):
-        if key in self.__keys:
-            return getattr(self, key)
-        else:
-            raise KeyError, key
-       
-    def __eq__(self, other):
-        if not isinstance(other, DictAttr):
-            return False
-        if self.__keys != other.__keys:
-            return False
-        for key in self.__keys:
-            if self.get(key) != other.get(key):
-                return False
-        return True
-
-    def __len__(self):
-        return len(self.__keys)
-
-    def __ne__(self, other):
-        return not self.__eq__(self. other)
-
-    def __repr__(self):
-        custom_repr = "{"
-        custom_repr += ', '.join( [repr(key) + ": " + repr(getattr(self, key)) for key in self.__keys] )
-        custom_repr += "}"
-        return custom_repr
+class DictAttr(dict):
+    #
+    # Renewed version.
+    # Old version moved to separate file for the greater good.
+    #
+    # I must admit that the first test (the one with __init__ used)
+    # was changed by me - the reason behind this is that
+    # in the requirements it is stated that the class must "replic" dict class
+    # and this is how dict reacts:
+    # 1. It does not take more than 1 argument in a constructor
+    # 2. The order of the keys may not coincide with the order they were added
+    #
+    '''
+    >>> x = DictAttr([('one', 1), ('two', 2), ('three', 3)])
+    >>> x
+    {'three': 3, 'two': 2, 'one': 1}
+    >>> x['three']
+    3
+    >>> x.get('one')
+    1
+    >>> x.get('five', 'missing')
+    'missing'
+    >>> x.one
+    1
+    >>> x.five
+    Traceback (most recent call last):
+    ...
+    AttributeError: DictAttr class has no attribute 'five'
+    >>> x.update({'three': 8, 'four': 4, 'five': 5})
+    >>> x.three
+    8
+    >>> x.get('five')
+    5
+    '''
 
     def __setattr__(self, key, value):
-        self.__dict__[key] = value
-        #
-        # Review: Try to do reverse logic: make setitem default action, but
-        # setattr (exclude non-public attr [remebmer convention about '_X'
-        # names]) as setitem alias. See. Try it, and you'll see how code will
-        # look better.
-        #
-        # It's common sence to use some non-public dict attr as storage for
-        # custom keys, instead of use __dict__ as common storage and
-        # self.__keys as "keys filtering".
-        if key not in self.__keys and key != '_DictAttr__keys':
-        #TODO: Think how bad it is    
-            self.__keys.append(key)
+        self[key] = value
 
-    def __setitem__(self, key, value):
-        setattr(self, key, value)
+    def __getattr__(self, key):
+        #
+        # Actually, I'm highly confused that this approach works
+        # I was expecting that self[key] would call for self.__getattr__
+        # again, thus creating an infinite recursion
+        #
+        try:
+            return self[key]
+        except(KeyError):
+            raise AttributeError("%s class has no attribute '%s'" % \
+                (self.__class__.__name__, key))
+
+
+class XDictAttr(DictAttr):
+    #
+    # TODO: This needs to be re-checked for consistency
+    # For example, if X class has def_foo method, what should happen
+    # if the X.foo = 8 is typed:
+    #
+    # a) the get_foo method is re-defined so it returns 8 now
+    # b) the get_foo method is not re-defined, but X.foo now returns 8
+    # c) X.foo = 8 causes an Exception (simulation of "read-only" attr)
+    # d) none of those, X.foo still returns 5 - this is the current situation
+    #
+    # a), b) or c) seem consistent, but d is not
+    #
+    '''
+    >>> class X(XDictAttr):
+    ...     def get_foo(self):
+    ...         return 5
+    ...     def get_bar(self):
+    ...         return 12
+
+    >>> x = X({'one': 1, 'two': 2, 'three': 3})
+    >>> x
+    X: {'one': 1, 'three': 3, 'two': 2}
+    >>> x['one']
+    1
+    >>> x.three
+    3
+    >>> x.bar
+    12
+    >>> x['foo']
+    5
+    >>> x.get('foo', 'missing')
+    5
+    >>> x.get('bzz', 'missing')
+    'missing'
+    '''
+
+    def __repr__(self):
+        #
+        # Added overload to fit the test provided
+        #
+        return "%s: %s" % (self.__class__.__name__, DictAttr.__repr__(self))
 
     def __str__(self):
-        custom_repr = "{"
-        #
-        # Review: too long line, try to keep 80 cols limit
-        #
-        custom_repr += ', '.join( [repr(key) + ": " + repr(getattr(self, key)) for key in self.__keys] )
-        custom_repr += "}"
-        return custom_repr
+        return "%s: %s" % (self.__class__.__name__, DictAttr.__str__(self))
 
-    def clear(self):
-        for key in self.__keys:
-            delattr(self, key)
-    
-    def copy(self):
-    #TODO:
-    #   A bit scary, but i think this'll work
+    def __getattr__(self, key):
         #
-        # Review: scary is reasonable for "generic dict", but both .keys() and
-        # .values() are controlled by you and they keep right order, so you
-        # may sleep quietly.
+        # I tried to simplify this part a bit, but for some reason it starts
+        # falling into recursion when getattr(self, meth_name) is used
         #
-        D = DictAttr(zip(self.keys(), self.values()))
-        return D
-    
-    def fromkeys(keys, values = []):
-        values.append( [None] * (len(keys) - len(values)) )
-        D = DictAttr(zip(keys, values))
-        return D
-    
-    def get(self, key, default_value = None):
-        if key in self.__keys:
-            return getattr(self, key)
+        meth_name = "get_" + key
+        if hasattr(self, meth_name):
+            meth = getattr(self, meth_name)
+            return meth()
+            ## return getattr(self.__class__, meth_name)()
         else:
-            return default_value
+            return DictAttr.__getattr__(self, key)
 
-    def has_key(key):
-        return key in self.__keys
-
-    def items(self):
-        return [(key, getattr(self, key)) for key in self.__keys]
-    
-    #
-    # Review: WRONG indent for comment. Comment MUST have the same indent
-    # as code. After `def f():` indent should have NEXT level.
-    #
-    def iteritems(self):
-    #TODO:
-    #   I'm not sure whether this realization satisfies the conditions
+    def __getitem__(self, key):
         #
-        # Review: better use generator expression inside iteritems and
-        # list(self.iteritems()) inside items :)
+        # Maybe the check for "get_" method deserves to be moved to a separate
+        # method for DRY reasons, but i think that it'll make the result less
+        # understandable
         #
-        return iter(self.items())
-        
-    def iterkeys(self):
-        return iter(self.keys())
-        
-    def itervalues(self):
-        return iter(self.values())
-    
-    def keys(self):
-        return self.__keys
-            
-    def pop(self, key, default_value = None):
-    #TODO: 
-    #   Current realization has a flaw: it will raise an exception if None
-    #   is passed as a default value
-        if key in self.__keys:
-            value = getattr(self, key)
-            delattr(self,key)
-            return value
+        meth_name = "get_" + key
+        if hasattr(self.__class__, meth_name):
+            meth = getattr(self, meth_name)
+            return meth()
         else:
-            if default_value == None:
-                raise KeyError, key
-            else:
-                return default_value
+            return DictAttr.__getitem__(self, key)
 
-    def popitem(self):
-        if not filter((lambda x: x[0] != '_'), dir(self)):
-            raise KeyError
+    def get(self, key, default):
+        meth_name = "get_" + key
+        if hasattr(self, meth_name):
+            meth = getattr(self, meth_name)
+            return meth()
         else:
-            key = filter((lambda x: x[0] != '_'), dir(self))[0]
-            value = getattr(self, key)
-            delattr(self,key)
-            return key, value            
-
-    def setdefault(self, key, default_value = None):
-        if key in self.__keys:
-            return getattr(self, key)
-        else:
-            setattr(self, key, default_value)
-            return default_value
-
-    def update(self, some_container, **kwargs):
-    #TODO:
-    #   I don't like how the check is done
-        if 'keys' in dir(some_container):
-            for key in some_container.keys():
-                setattr(self, key, some_container[key])
-        else:
-            for pair in some_container:
-                setattr(self, pair[0], pair[1])
-        for key in kwargs.keys():
-            setattr(self, key, kwargs[key])    
-    
-    def values(self):
-        return [getattr(self, key) for key in self.keys()]
-
-
+            return DictAttr.get(self, key, default)
 
 
 if __name__ == "__main__":
