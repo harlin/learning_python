@@ -5,8 +5,9 @@
 def cycle(some_iter):
     '''
     This function presents a cyclic version of the provided iterator.
-    Instead of throwing StopIteration at the end, it returns to the first element.
-    
+    Instead of throwing StopIteration at the end, it
+    goes back to the first element.
+
     >>> i = iter([1, 2, 3])
     >>> c = cycle(i)
     >>> c.next()
@@ -19,26 +20,19 @@ def cycle(some_iter):
     1
 
     '''
-    #   Renewed realization has no "while True" constructions
-    
+    # Renewed realization with memory leak fixed
+    # Also minor bug fixed
+
     item_list = []
     for n in some_iter:
         item_list.append(n)
         yield n
 
-    #
-    # Review: WARNING: Memory leak detected!
-    for item in item_list:
-        item_list.append(item)
-        yield item
-    # You shouldn't remove `while` everwhere :)
-    # `while` is good enough when you have item_list collected
-    ##
-    ## i = 0
-    ## n = len(item_list)
-    ## while True:
-    ##     i+= 1
-    ##     yield item_list[ i % n ]
+    i = 0
+    n = len(item_list)
+    while True:
+        yield item_list[i % n]
+        i += 1
 
 
 def chain(*args):
@@ -64,12 +58,8 @@ def chain(*args):
     for some_iter in args:
         for n in some_iter:
             yield n
-    #
-    # Review: StopIteration is redudant. `return` inside generator implicitly
-    # raises StopIteraton. But when you return nothing, it implicitly means
-    # `return None`.
-    #
-    raise StopIteration
+
+    return
 
 if __name__ == "__main__":
     import doctest
