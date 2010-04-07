@@ -129,39 +129,66 @@ class XDictAttr(DictAttr):
     def __str__(self):
         return "%s: %s" % (self.__class__.__name__, DictAttr.__str__(self))
 
-    def __getattr__(self, key):
+    def _get_check(self, key):
         #
+        # This inner method is used for check, if there does exist a "get_key"
         # I tried to simplify this part a bit, but for some reason it starts
         # falling into recursion when getattr(self, meth_name) is used
-        #
-        meth_name = "get_" + key
-        if hasattr(self, meth_name):
-            meth = getattr(self, meth_name)
-            return meth()
-            ## return getattr(self.__class__, meth_name)()
-        else:
-            return DictAttr.__getattr__(self, key)
-
-    def __getitem__(self, key):
-        #
-        # Maybe the check for "get_" method deserves to be moved to a separate
-        # method for DRY reasons, but i think that it'll make the result less
-        # understandable
         #
         meth_name = "get_" + key
         if hasattr(self.__class__, meth_name):
             meth = getattr(self, meth_name)
             return meth()
         else:
+            raise Exception(key)
+
+    def __getattr__(self, key):
+        try:
+            return self._get_check(key)
+        except:
+            return DictAttr.__getattr__(self, key)
+
+    def __getitem__(self, key):
+        try:
+            return self._get_check(key)
+        except:
             return DictAttr.__getitem__(self, key)
 
-    def get(self, key, default):
-        meth_name = "get_" + key
-        if hasattr(self, meth_name):
-            meth = getattr(self, meth_name)
-            return meth()
-        else:
+    def get(self, key, default=None):
+        try:
+            return self._get_check(key)
+        except:
             return DictAttr.get(self, key, default)
+
+
+class IterableMetaClass(type):
+
+    instances = []
+
+    def __iter__(cls):
+        return iter(cls.instances)
+
+
+class Reg:
+    '''
+    >>> x = Reg()
+    >>> y = Reg()
+    >>> z = Reg()
+    >>> for i in Reg:
+    ...     print [x, y ,z].index(i)
+    0
+    1
+    2
+    '''
+
+    __metaclass__ = IterableMetaClass
+    instances = []
+
+    def __init__(self):
+        Reg.instances.append(self)
+
+    def __del__(self):
+        Reg.instances.remove(self)
 
 
 if __name__ == "__main__":
