@@ -76,6 +76,9 @@ class DictAttr(dict):
         # I was expecting that self[key] would call for self.__getattr__
         # again, thus creating an infinite recursion
         #
+        # Review: __getattr__ is called on <dot> expanding: self.some
+        # When you call self[key], there is no <dot>, only brackets.
+        #
         try:
             return self[key]
         except(KeyError):
@@ -95,6 +98,8 @@ class XDictAttr(DictAttr):
     # d) none of those, X.foo still returns 5 - this is the current situation
     #
     # a), b) or c) seem consistent, but d is not
+    #
+    # Review:  b) variant looks the best
     #
     '''
     >>> class X(XDictAttr):
@@ -142,6 +147,14 @@ class XDictAttr(DictAttr):
         else:
             raise Exception(key)
 
+    
+    #
+    # Review: hiding exceptions is very-very bad. And you should use grained
+    # exception, not base class Exception
+    #
+    # And try to reuse already defined code. get _should_ use already defined
+    # __getitem__ explicitly or implicitly (via self[key]).
+    #
     def __getattr__(self, key):
         try:
             return self._get_check(key)
@@ -185,6 +198,9 @@ class Reg:
     instances = []
 
     def __init__(self):
+        #
+        # Review: this code should be really in metaclass.
+        #
         Reg.instances.append(self)
 
     def __del__(self):
