@@ -79,6 +79,9 @@ class DictAttr(dict):
         # Review: __getattr__ is called on <dot> expanding: self.some
         # When you call self[key], there is no <dot>, only brackets.
         #
+        # Yes, but self[key] does implicitly call self.__getitem__
+        # Where the <dot> appears
+        #
         try:
             return self[key]
         except(KeyError):
@@ -86,20 +89,16 @@ class DictAttr(dict):
                 (self.__class__.__name__, key))
 
 
+class GetMethodError(Exception):
+    pass
+
+
 class XDictAttr(DictAttr):
     #
-    # TODO: This needs to be re-checked for consistency
-    # For example, if X class has def_foo method, what should happen
-    # if the X.foo = 8 is typed:
+    # TODO: Add more tests
     #
-    # a) the get_foo method is re-defined so it returns 8 now
-    # b) the get_foo method is not re-defined, but X.foo now returns 8
-    # c) X.foo = 8 causes an Exception (simulation of "read-only" attr)
-    # d) none of those, X.foo still returns 5 - this is the current situation
-    #
-    # a), b) or c) seem consistent, but d is not
-    #
-    # Review:  b) variant looks the best
+    # TODO: Find out why placing GetMethodError definition inside the
+    # class fails
     #
     '''
     >>> class X(XDictAttr):
@@ -113,16 +112,27 @@ class XDictAttr(DictAttr):
     X: {'one': 1, 'three': 3, 'two': 2}
     >>> x['one']
     1
+    >>> x['four']
+    Traceback (most recent call last):
+    ...
+    KeyError: 'four'
     >>> x.three
     3
     >>> x.bar
     12
+    >>> x.foobar
+    Traceback (most recent call last):
+    ...
+    AttributeError: X class has no attribute 'foobar'
     >>> x['foo']
     5
     >>> x.get('foo', 'missing')
     5
     >>> x.get('bzz', 'missing')
     'missing'
+    >>> x.foo = 8
+    >>> x.get('foo', 'missing')
+    8
     '''
 
     def __repr__(self):
@@ -145,38 +155,49 @@ class XDictAttr(DictAttr):
             meth = getattr(self, meth_name)
             return meth()
         else:
-            raise Exception(key)
+            raise GetMethodError(key)
 
-    
-    #
-    # Review: hiding exceptions is very-very bad. And you should use grained
-    # exception, not base class Exception
-    #
-    # And try to reuse already defined code. get _should_ use already defined
-    # __getitem__ explicitly or implicitly (via self[key]).
-    #
     def __getattr__(self, key):
         try:
-            return self._get_check(key)
-        except:
             return DictAttr.__getattr__(self, key)
+        except AttributeError:
+            try:
+                return self._get_check(key)
+            except GetMethodError:
+                raise AttributeError("%s class has no attribute '%s'" % \
+                    (self.__class__.__name__, key))
 
     def __getitem__(self, key):
         try:
-            return self._get_check(key)
-        except:
             return DictAttr.__getitem__(self, key)
+        except KeyError:
+            try:
+                return self._get_check(key)
+            except GetMethodError:
+                raise KeyError(key)
 
     def get(self, key, default=None):
         try:
-            return self._get_check(key)
-        except:
-            return DictAttr.get(self, key, default)
+            return self[key]
+        except KeyError:
+            return default
 
 
-class IterableMetaClass(type):
+class IterableRegisterMetaClass(type):
 
-    instances = []
+    def __new__(metacls, name, bases, dictionary):
+        def counter(instance):
+            instance.__class__.instances.append(instance)
+
+        def decounter(instance):
+            instance.__class__.instances.remove(instance)
+
+        dictionary['__init__'] = counter
+        dictionary['__del__'] = decounter
+        dictionary['instances'] = []
+
+        return super(IterableRegisterMetaClass, metacls).\
+            __new__(metacls, name, bases, dictionary)
 
     def __iter__(cls):
         return iter(cls.instances)
@@ -194,17 +215,17 @@ class Reg:
     2
     '''
 
-    __metaclass__ = IterableMetaClass
-    instances = []
+    __metaclass__ = IterableRegisterMetaClass
 
-    def __init__(self):
         #
         # Review: this code should be really in metaclass.
         #
-        Reg.instances.append(self)
-
-    def __del__(self):
-        Reg.instances.remove(self)
+        # Yes. Actually, i was initially intending that the metaclass
+        # would just add an iterator, but
+        #   return iter(cls.instances)
+        # actually broke this intention (and I happened be too lazy
+        # to make everything consistent)
+        #
 
 
 if __name__ == "__main__":
