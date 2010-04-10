@@ -185,22 +185,20 @@ class XDictAttr(DictAttr):
 
 class IterableRegisterMetaClass(type):
 
-    def __new__(metacls, name, bases, dictionary):
+    def __init__(cls, name, bases, dictionary):
+
         def counter(instance):
-            instance.__class__.instances.append(instance)
+            instance.__class__._instances.append(instance)
 
         def decounter(instance):
-            instance.__class__.instances.remove(instance)
+            instance.__class__._instances.remove(instance)
 
-        dictionary['__init__'] = counter
-        dictionary['__del__'] = decounter
-        dictionary['instances'] = []
-
-        return super(IterableRegisterMetaClass, metacls).\
-            __new__(metacls, name, bases, dictionary)
+        setattr(cls, '__init__', counter)
+        setattr(cls, '__del__', decounter)
+        setattr(cls, '_instances', [])
 
     def __iter__(cls):
-        return iter(cls.instances)
+        return iter(cls._instances)
 
 
 class Reg:
