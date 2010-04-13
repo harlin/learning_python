@@ -72,19 +72,22 @@ class Object:
     '''
     __metaclass__ = TypeFixerMeta
 
+
 class LengthError(Exception):
     pass
 
+
 class Integer(object):
-    
+
     def __set__(self, instance, value):
         if not isinstance(value, int):
             raise TypeError
         else:
             self._value = value
 
-    #def __get__(self, instance, owner):
-    #    return self._value
+    def __get__(self, instance, owner):
+        return self._value
+
 
 class Str(object):
 
@@ -99,14 +102,22 @@ class Str(object):
         else:
             self.__value = value
 
-    #def __get__(self, instance, owner):
-    #    return self.__value
-        
+    def __get__(self, instance, owner):
+        return self.__value
+
     def getlength(self):
         return self._length
 
 
 class Table(type):
+    #
+    # I somehow like this implementation better, although it still
+    # uses almost the same principle
+    # I was wondering whether i can use some "registry" to store
+    # table fields, but failed to find out how to intercept
+    #   "width = Integer()"
+    # inside a class definition
+    #
     '''
     >>> class Image():
     ...    __metaclass__ = Table
@@ -115,26 +126,37 @@ class Table(type):
     ...    path = Str(128)
     >>> print Image.sql()
     CREATE TABLE image (
+        width integer,
         height integer,
-        path varchar(128),
-        width integer
+        path varchar(128)
     )
     '''
-        
+    def __new__(metacls, name, bases, dictionary):
+
+        fields = {}
+        for key in dictionary:
+            if not key[:2] is '__':
+                value = dictionary[key]
+                if isinstance(value, Integer):
+                    fields[key] = 'integer'
+                if isinstance(value, Str):
+                    fields[key] = 'varchar(%i)' % value.getlength()
+
+        dictionary['field_registry'] = fields
+
+        return super(Table, metacls).__new__(metacls, name, bases, dictionary)
+
     def sql(cls):
         schema = "CREATE TABLE "
         schema += cls.__name__.lower()
         schema += " (\n"
-        for key in dir(cls):
-            if isinstance(getattr(cls, key), Integer):
-                schema += "    %s integer,\n" % (key)
-            if isinstance(getattr(cls, key), Str):
-                schema += "    %s varchar(%i),\n" %\
-                    (key, getattr(cls, key).getlength())
-                
+        for key, value in cls.field_registry.items():
+            schema += "    %s %s,\n" % (key, value)
+
         schema = schema[:-2]
         schema += "\n)"
         return schema
+
 
 if __name__ == "__main__":
     import doctest
