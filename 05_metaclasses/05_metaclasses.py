@@ -72,6 +72,69 @@ class Object:
     '''
     __metaclass__ = TypeFixerMeta
 
+class LengthError(Exception):
+    pass
+
+class Integer(object):
+    
+    def __set__(self, instance, value):
+        if not isinstance(value, int):
+            raise TypeError
+        else:
+            self._value = value
+
+    #def __get__(self, instance, owner):
+    #    return self._value
+
+class Str(object):
+
+    def __init__(self, length):
+        self._length = length
+
+    def __set__(self, instance, value):
+        if not isinstance(value, str):
+            raise TypeError
+        elif len(value) > self.__length:
+            raise LengthError
+        else:
+            self.__value = value
+
+    #def __get__(self, instance, owner):
+    #    return self.__value
+        
+    def getlength(self):
+        return self._length
+
+
+class Table(type):
+    '''
+    >>> class Image():
+    ...    __metaclass__ = Table
+    ...    height = Integer()
+    ...    width = Integer()
+    ...    path = Str(128)
+    >>> print Image.sql()
+    CREATE TABLE image (
+        height integer,
+        path varchar(128),
+        width integer
+    )
+    '''
+        
+    def sql(cls):
+        schema = "CREATE TABLE "
+        schema += cls.__name__.lower()
+        schema += " (\n"
+        for key in dir(cls):
+            if isinstance(getattr(cls, key), Integer):
+                schema += "    %s integer,\n" % (key)
+            if isinstance(getattr(cls, key), Str):
+                schema += "    %s varchar(%i),\n" %\
+                    (key, getattr(cls, key).getlength())
+                
+        schema = schema[:-2]
+        schema += "\n)"
+        return schema
 
 if __name__ == "__main__":
     import doctest
